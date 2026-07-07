@@ -35,13 +35,12 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev node-gyp pkg-config python-is-python3 && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Install JavaScript dependencies
-ARG NODE_VERSION=22.14.0
-ARG YARN_VERSION=1.22.22
+# Install JavaScript dependencies, using the Node version pinned in .node-version
+COPY .node-version .node-version
 ENV PATH=/usr/local/node/bin:$PATH
 RUN curl -sL https://github.com/nodenv/node-build/archive/master.tar.gz | tar xz -C /tmp/ && \
-    /tmp/node-build-master/bin/node-build "${NODE_VERSION}" /usr/local/node && \
-    npm install -g yarn@$YARN_VERSION && \
+    /tmp/node-build-master/bin/node-build "$(cat .node-version)" /usr/local/node && \
+    corepack enable && \
     rm -rf /tmp/node-build-master
 
 # Install application gems
