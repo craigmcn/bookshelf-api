@@ -3,7 +3,7 @@ Rails.application.routes.draw do
   resources :books, only: [:index, :show, :create, :update, :destroy]
   get "book_search", to: "book_search#index"
 
-  get "up" => "rails/health#show", as: :rails_health_check
+  get "up", to: "rails/health#show", as: :rails_health_check
 
   resource :session, controller: "sessions", only: [:show, :create, :destroy]
   resources :users, controller: "clearance/users", only: [:create]

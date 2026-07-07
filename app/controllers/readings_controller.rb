@@ -18,7 +18,7 @@ class ReadingsController < ApplicationController
     if @reading.save
       render json: {reading: reading_json(@reading)}, status: :created
     else
-      render json: {errors: @reading.errors.full_messages}, status: :unprocessable_entity
+      render json: {errors: @reading.errors.full_messages}, status: :unprocessable_content
     end
   end
 
@@ -27,7 +27,7 @@ class ReadingsController < ApplicationController
     if @reading.update(reading_params)
       render json: {reading: reading_json(@reading)}
     else
-      render json: {errors: @reading.errors.full_messages}, status: :unprocessable_entity
+      render json: {errors: @reading.errors.full_messages}, status: :unprocessable_content
     end
   end
 
