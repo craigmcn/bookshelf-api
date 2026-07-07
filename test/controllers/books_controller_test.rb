@@ -7,62 +7,64 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
 
   # Public access
   test "anyone can view books index" do
-    get books_url
+    get books_url, as: :json
     assert_response :success
+    assert response.parsed_body.key?("books")
   end
 
   test "anyone can view a book" do
-    get book_url(@book)
+    get book_url(@book), as: :json
     assert_response :success
+    assert_equal @book.title, response.parsed_body.dig("book", "title")
   end
 
   # Auth wall
-  test "guest is redirected to sign in for new" do
-    get new_book_url
-    assert_redirected_to sign_in_path
-  end
-
-  test "guest is redirected to sign in for create" do
-    post books_url, params: {book: {title: "New", author: "Author", added_by_id: users(:member).id}}
-    assert_redirected_to sign_in_path
+  test "guest cannot create a book" do
+    post books_url, params: {book: {title: "New", author: "Author"}}, as: :json
+    assert_response :unauthorized
   end
 
   # Member permissions
   test "member can create a book" do
     sign_in_as users(:member)
     assert_difference "Book.count" do
-      post books_url, params: {book: {title: "New Book", author: "Some Author", added_by_id: users(:member).id, cover_url: ""}}
+      post books_url, params: {book: {title: "New Book", author: "Some Author", cover_url: ""}}, as: :json
     end
-    assert_redirected_to book_url(Book.last)
+    assert_response :created
+    assert_equal "New Book", response.parsed_body.dig("book", "title")
   end
 
   test "member cannot update a book" do
     sign_in_as users(:member)
-    patch book_url(@book), params: {book: {title: "Changed", author: @book.author, added_by_id: @book.added_by_id, cover_url: @book.cover_url}}
-    assert_response :redirect
+    patch book_url(@book), params: {book: {title: "Changed", author: @book.author, cover_url: @book.cover_url}},
+      as: :json
+    assert_response :forbidden
     assert_not_equal "Changed", @book.reload.title
   end
 
   test "member cannot destroy a book" do
     sign_in_as users(:member)
     assert_no_difference "Book.count" do
-      delete book_url(@book)
+      delete book_url(@book), as: :json
     end
+    assert_response :forbidden
   end
 
-  # Admin permissions
-  test "admin can update a book" do
-    sign_in_as users(:admin)
-    patch book_url(@book), params: {book: {title: "Updated", author: @book.author, added_by_id: @book.added_by_id, cover_url: @book.cover_url}}
-    assert_redirected_to book_url(@book)
+  # Moderator/admin permissions
+  test "moderator can update a book" do
+    sign_in_as users(:moderator)
+    patch book_url(@book), params: {book: {title: "Updated", author: @book.author, cover_url: @book.cover_url}},
+      as: :json
+    assert_response :success
     assert_equal "Updated", @book.reload.title
+    assert_equal "Updated", response.parsed_body.dig("book", "title")
   end
 
-  test "admin can destroy a book" do
-    sign_in_as users(:admin)
+  test "moderator can destroy a book" do
+    sign_in_as users(:moderator)
     assert_difference "Book.count", -1 do
-      delete book_url(@book)
+      delete book_url(@book), as: :json
     end
-    assert_redirected_to books_url
+    assert_response :no_content
   end
 end

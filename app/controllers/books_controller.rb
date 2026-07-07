@@ -1,22 +1,15 @@
 class BooksController < ApplicationController
   skip_before_action :require_login, only: [:index, :show]
-  before_action :set_book, only: %i[show edit update destroy]
+  before_action :set_book, only: %i[show update destroy]
 
   def index
     @books = policy_scope(Book)
+    render json: {books: @books.map { |b| book_json(b) }}
   end
 
   def show
     authorize @book
-    @user_reading = current_user&.readings&.find_by(book: @book)
-  end
-
-  def new
-    @book = Book.new
-  end
-
-  def edit
-    authorize @book
+    render json: {book: book_json(@book, current_user: current_user)}
   end
 
   def create
@@ -24,25 +17,25 @@ class BooksController < ApplicationController
     authorize @book
 
     if @book.save
-      redirect_to @book, notice: "Book was successfully created."
+      render json: {book: book_json(@book)}, status: :created
     else
-      render :new, status: :unprocessable_content
+      render json: {errors: @book.errors.full_messages}, status: :unprocessable_content
     end
   end
 
   def update
     authorize @book
     if @book.update(book_params)
-      redirect_to @book, notice: "Book was successfully updated.", status: :see_other
+      render json: {book: book_json(@book)}
     else
-      render :edit, status: :unprocessable_content
+      render json: {errors: @book.errors.full_messages}, status: :unprocessable_content
     end
   end
 
   def destroy
     authorize @book
     @book.destroy!
-    redirect_to books_path, notice: "Book was successfully destroyed.", status: :see_other
+    head :no_content
   end
 
   private
@@ -53,5 +46,24 @@ class BooksController < ApplicationController
 
   def book_params
     params.expect(book: [:title, :author, :cover_url])
+  end
+
+  def book_json(book, current_user: nil)
+    json = {
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      cover_url: book.cover_url,
+      added_by_id: book.added_by_id
+    }
+    if current_user
+      reading = current_user.readings.find_by(book: book)
+      json[:user_reading] = reading ? reading_json(reading) : nil
+    end
+    json
+  end
+
+  def reading_json(reading)
+    {id: reading.id, status: reading.status, rating: reading.rating}
   end
 end

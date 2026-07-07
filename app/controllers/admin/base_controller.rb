@@ -4,14 +4,10 @@ class Admin::BaseController < ApplicationController
   private
 
   def require_moderator_or_above
-    render_forbidden unless current_user&.moderator_or_above?
+    render json: {error: "Forbidden"}, status: :forbidden unless current_user&.moderator_or_above?
   end
 
   def require_admin
-    render_forbidden unless current_user&.admin?
-  end
-
-  def render_forbidden
-    render plain: "Forbidden", status: :forbidden
+    render json: {error: "Forbidden"}, status: :forbidden unless current_user&.admin?
   end
 end

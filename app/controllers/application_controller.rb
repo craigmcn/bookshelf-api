@@ -1,9 +1,7 @@
-class ApplicationController < ActionController::Base
+class ApplicationController < ActionController::API
+  include ActionController::Cookies
   include Clearance::Controller
   include Pundit::Authorization
-
-  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
-  allow_browser versions: :modern
 
   before_action :require_login
 
@@ -11,8 +9,11 @@ class ApplicationController < ActionController::Base
 
   private
 
+  def deny_access(flash_message = nil)
+    render json: {error: "Unauthorized"}, status: :unauthorized
+  end
+
   def user_not_authorized
-    flash[:alert] = "You are not authorized to perform this action."
-    redirect_back_or_to(root_path)
+    render json: {error: "Forbidden"}, status: :forbidden
   end
 end
