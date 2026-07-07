@@ -76,6 +76,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Enable Corepack for Yarn
+        run: corepack enable
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
