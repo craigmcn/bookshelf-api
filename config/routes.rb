@@ -9,7 +9,7 @@ Rails.application.routes.draw do
   resources :users, controller: "clearance/users", only: [:create]
 
   namespace :admin do
-    get "dashboard", to: "dashboard#index"
+    root "dashboard#index"
     resources :users, only: [:index, :update]
     resources :readings, only: [:index]
   end

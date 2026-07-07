@@ -9,6 +9,10 @@ class ApplicationController < ActionController::API
 
   private
 
+  def deny_access(flash_message = nil)
+    render json: {error: "Unauthorized"}, status: :unauthorized
+  end
+
   def user_not_authorized
     render json: {error: "Forbidden"}, status: :forbidden
   end

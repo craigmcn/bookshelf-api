@@ -1,18 +1,34 @@
 require "test_helper"
 
 class SessionsControllerTest < ActionDispatch::IntegrationTest
-  test "member is redirected to root after sign in" do
-    post session_url, params: {session: {email: users(:member).email, password: User::DEFAULT_PASSWORD}}
-    assert_redirected_to root_path
+  test "valid credentials return 201 with user JSON" do
+    post session_url, params: {session: {email: users(:member).email, password: User::DEFAULT_PASSWORD}},
+      as: :json
+    assert_response :created
+    assert_equal users(:member).email, response.parsed_body.dig("user", "email")
+    assert_includes response.parsed_body.dig("user", "roles"), "member"
   end
 
-  test "admin is redirected to admin root after sign in" do
-    post session_url, params: {session: {email: users(:admin).email, password: User::DEFAULT_PASSWORD}}
-    assert_redirected_to admin_root_path
-  end
-
-  test "invalid credentials return unauthorized" do
-    post session_url, params: {session: {email: users(:member).email, password: "wrong"}}
+  test "invalid credentials return 401" do
+    post session_url, params: {session: {email: users(:member).email, password: "wrong"}}, as: :json
     assert_response :unauthorized
+  end
+
+  test "authenticated user can restore session" do
+    sign_in_as users(:member)
+    get session_url, as: :json
+    assert_response :success
+    assert_equal users(:member).email, response.parsed_body.dig("user", "email")
+  end
+
+  test "unauthenticated session check returns 401" do
+    get session_url, as: :json
+    assert_response :unauthorized
+  end
+
+  test "sign out returns 204" do
+    sign_in_as users(:member)
+    delete session_url, as: :json
+    assert_response :no_content
   end
 end
