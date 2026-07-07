@@ -42,7 +42,7 @@ bundle exec brakeman                    # security scan
 
 - CORS origins are set via the `CORS_ORIGINS` env var (comma-separated). Defaults to `http://localhost:5173` (Vite dev server).
 - Auth uses Clearance's signed cookie (`remember_token`). The React SPA must send requests with `credentials: 'include'`.
-- Session cookie is `SameSite=Lax` in development; set `SameSite=None; Secure` for cross-origin production deploys.
+- Session cookie is `SameSite=Lax` in development; `SameSite=None; Secure` in production (`config/initializers/clearance.rb`, requires `config.force_ssl` in `config/environments/production.rb`).
 
 ### Auth Endpoints
 
@@ -68,7 +68,7 @@ GET    /readings           owner (current user's readings)
 GET    /readings/:id       owner or moderator+
 POST   /readings           member+
 PATCH  /readings/:id       owner or moderator+
-DELETE /readings/:id       owner or moderator+ (soft delete)
+DELETE /readings/:id       moderator+ only (soft delete)
 
 GET    /book_search?q=...  member+ (proxies Open Library)
 

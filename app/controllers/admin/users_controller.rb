@@ -5,7 +5,7 @@ class Admin::UsersController < Admin::BaseController
     users = User.all.order(:email).includes(:roles)
     render json: {
       users: users.map { |u|
-        {id: u.id, email: u.email, roles: u.roles.pluck(:name)}
+        {id: u.id, email: u.email, roles: u.roles.map(&:name)}
       },
       available_roles: Role.all.order(:name).pluck(:name)
     }

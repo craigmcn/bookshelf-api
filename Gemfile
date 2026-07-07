@@ -41,6 +41,9 @@ group :development, :test do
   gem "brakeman", require: false
   gem "standard", ">= 1.35.1", require: false
   gem "standard-rails", require: false
+
+  # Detects N+1 queries and unused eager loading
+  gem "bullet"
 end
 
 group :development do
