@@ -1,20 +1,14 @@
 class ReadingsController < ApplicationController
-  before_action :set_reading, only: %i[show edit update destroy]
+  before_action :set_reading, only: %i[show update destroy]
 
   def index
-    @readings = current_user.readings
+    readings = current_user.readings.includes(:book)
+    render json: {readings: readings.map { |r| reading_json(r) }}
   end
 
   def show
     authorize @reading
-  end
-
-  def new
-    @reading = Reading.new(book_id: params[:book_id])
-  end
-
-  def edit
-    authorize @reading
+    render json: {reading: reading_json(@reading)}
   end
 
   def create
@@ -22,25 +16,25 @@ class ReadingsController < ApplicationController
     authorize @reading
 
     if @reading.save
-      redirect_to @reading, notice: "Reading was successfully created."
+      render json: {reading: reading_json(@reading)}, status: :created
     else
-      render :new, status: :unprocessable_content
+      render json: {errors: @reading.errors.full_messages}, status: :unprocessable_entity
     end
   end
 
   def update
     authorize @reading
     if @reading.update(reading_params)
-      redirect_to @reading, notice: "Reading was successfully updated.", status: :see_other
+      render json: {reading: reading_json(@reading)}
     else
-      render :edit, status: :unprocessable_content
+      render json: {errors: @reading.errors.full_messages}, status: :unprocessable_entity
     end
   end
 
   def destroy
     authorize @reading
     @reading.soft_delete
-    redirect_to readings_path, notice: "Reading was removed.", status: :see_other
+    head :no_content
   end
 
   private
@@ -51,5 +45,21 @@ class ReadingsController < ApplicationController
 
   def reading_params
     params.expect(reading: [:book_id, :status, :rating, :review])
+  end
+
+  def reading_json(reading)
+    {
+      id: reading.id,
+      status: reading.status,
+      rating: reading.rating,
+      review: reading.review,
+      deleted_at: reading.deleted_at,
+      book: {
+        id: reading.book.id,
+        title: reading.book.title,
+        author: reading.book.author,
+        cover_url: reading.book.cover_url
+      }
+    }
   end
 end
