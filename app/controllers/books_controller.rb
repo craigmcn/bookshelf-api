@@ -64,6 +64,6 @@ class BooksController < ApplicationController
   end
 
   def reading_json(reading)
-    {id: reading.id, status: reading.status, rating: reading.rating}
+    {id: reading.id, status: reading.status, rating: reading.rating, review: reading.review}
   end
 end
