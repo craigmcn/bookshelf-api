@@ -43,7 +43,7 @@ end
 
 # Readings
 statuses = Reading.statuses.keys
-ratings = Reading.ratings.keys
+ratings = (1..5).to_a
 
 Book.find_each do |book|
   all_users.each do |user|
