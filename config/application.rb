@@ -25,9 +25,14 @@ module CommunityBookshelf
 
     config.api_only = true
 
-    # Re-add cookie and session middleware so Clearance can use signed cookies
-    config.middleware.use ActionDispatch::Cookies
-    config.middleware.use ActionDispatch::Session::CookieStore
+    # Re-add cookie and session middleware so Clearance can use signed cookies.
+    # Must come before Clearance::RackSession (inserted by Clearance's own railtie) —
+    # `use` always appends to the end of the stack, which put Cookies *after*
+    # RackSession here. Since Rack unwinds the response inside-out, Cookies was
+    # flushing its (still-empty) jar before RackSession ever wrote the remember_token
+    # into it, so `Set-Cookie` was silently never sent on a real sign-in.
+    config.middleware.insert_before Clearance::RackSession, ActionDispatch::Cookies
+    config.middleware.insert_after ActionDispatch::Cookies, ActionDispatch::Session::CookieStore
 
     config.autoload_lib(ignore: %w[assets tasks])
   end
