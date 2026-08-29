@@ -36,13 +36,26 @@ bin/rails db:seed                       # seed roles + users
 bin/rubocop                             # lint (StandardRB via standard + standard-rails)
 bin/rubocop -a                          # auto-correct safe offenses
 bundle exec brakeman                    # security scan
+
+bin/e2e_server                          # seeded test-env server for bookshelf-spa's real-backend Playwright project
 ```
+
+`bin/e2e_server` resets the test DB (`db:test:prepare db:fixtures:load`), backfills
+`remember_token` for fixture users (AR fixtures skip the `before_create` callback
+Clearance needs for a real cookie-based sign-in), and boots Rails with
+`OPEN_LIBRARY_STUB=1` (stubs `openlibrary.org/search.json` via WebMock — see
+`config/initializers/open_library_stub.rb`) and `CORS_ORIGINS` defaulting to
+`bookshelf-spa`'s dev port (3150). This repo has no Playwright suite of its own
+(API-only, nothing to drive a browser against) — `bookshelf-spa`'s
+`playwright.config.ts` starts this as a second `webServer` for its real-backend
+parity project. Same shared fixture data as `community_bookshelf`/`bookshelf-islands`.
 
 ## CORS & Auth
 
 - CORS origins are set via the `CORS_ORIGINS` env var (comma-separated). Defaults to `http://localhost:5173` (Vite dev server).
 - Auth uses Clearance's signed cookie (`remember_token`). The React SPA must send requests with `credentials: 'include'`.
 - Session cookie is `SameSite=Lax` in development; `SameSite=None; Secure` in production (`config/initializers/clearance.rb`, requires `config.force_ssl` in `config/environments/production.rb`).
+- `config/application.rb` re-adds `ActionDispatch::Cookies`/`Session::CookieStore` (stripped by `api_only`) via `insert_before Clearance::RackSession` — they must sit *before* `Clearance::RackSession` in the middleware stack, not just appended with `.use`. Rack unwinds the response inside-out, so if Cookies were the more-inner (later-in-stack) middleware, it would flush its cookie jar before `Clearance::RackSession` ever wrote the remember_token into it, and `Set-Cookie` would silently never be sent on a real sign-in. (This was a live bug until 2026-08 — verify with `Rails.application.middleware.each_with_index { |m, i| puts "#{i}: #{m.klass}" }` if auth cookies ever seem to stop working again.)
 
 ### Auth Endpoints
 

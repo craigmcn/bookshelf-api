@@ -49,3 +49,9 @@ end
 group :development do
   gem "dotenv-rails"
 end
+
+group :test do
+  # Stubs the Open Library HTTP call when booting the server for Playwright e2e runs
+  # (see bookshelf-spa's real-backend e2e project)
+  gem "webmock", require: false
+end

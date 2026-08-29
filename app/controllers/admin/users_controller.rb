@@ -7,7 +7,7 @@ class Admin::UsersController < Admin::BaseController
       users: users.map { |u|
         {id: u.id, email: u.email, roles: u.roles.map(&:name)}
       },
-      available_roles: Role.all.order(:name).pluck(:name)
+      available_roles: Role.all.order(:name).map { |r| {id: r.id, name: r.name} }
     }
   end
 
