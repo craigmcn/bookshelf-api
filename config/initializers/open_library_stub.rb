@@ -1,7 +1,6 @@
-if ENV["OPEN_LIBRARY_STUB"] == "1"
+if Rails.env.test? && ENV["OPEN_LIBRARY_STUB"] == "1"
   require "webmock"
   WebMock.enable!
-  WebMock.allow_net_connect!
 
   webmock = Object.new.extend(WebMock::API)
 
