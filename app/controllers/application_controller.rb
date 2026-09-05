@@ -2,6 +2,7 @@ class ApplicationController < ActionController::API
   include ActionController::Cookies
   include Clearance::Controller
   include Pundit::Authorization
+  include Pagy::Method
 
   before_action :require_login
 
