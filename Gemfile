@@ -19,6 +19,9 @@ gem "pundit"
 # HTTP client
 gem "faraday"
 
+# Pagination
+gem "pagy", "~> 43.6"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[windows jruby]
 
