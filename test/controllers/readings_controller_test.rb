@@ -17,6 +17,36 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.key?("readings")
   end
 
+  test "readings index includes pagination metadata" do
+    sign_in_as users(:member)
+    get readings_url, as: :json
+    assert_response :success
+    pagination = response.parsed_body["pagination"]
+    assert_equal 1, pagination["page"]
+    assert_equal users(:member).readings.count, pagination["count"]
+  end
+
+  test "readings index can be filtered by status" do
+    sign_in_as users(:member)
+    finished = Reading.create!(user: users(:member), book: books(:two), status: :finished)
+
+    # GET requests with a params: hash and as: :json rely on Rack::MethodOverride
+    # to translate Rails' test-only POST+X-Http-Method-Override trick back to a
+    # GET — a middleware config.api_only strips and this app never re-adds. Pass
+    # the query string inline instead of via params: to sidestep it.
+    get "/readings?status=finished", as: :json
+    assert_response :success
+    ids = response.parsed_body["readings"].pluck("id")
+    assert_equal [finished.id], ids
+  end
+
+  test "readings index ignores an unknown status filter value" do
+    sign_in_as users(:member)
+    get "/readings?status=bogus", as: :json
+    assert_response :success
+    assert_equal users(:member).readings.count, response.parsed_body["readings"].size
+  end
+
   test "member can create a reading" do
     sign_in_as users(:member)
     assert_difference "Reading.count" do

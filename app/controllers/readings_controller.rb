@@ -3,7 +3,18 @@ class ReadingsController < ApplicationController
 
   def index
     readings = current_user.readings.includes(:book)
-    render json: {readings: readings.map { |r| reading_json(r) }}
+
+    if params[:status].present? && Reading.statuses.key?(params[:status])
+      readings = readings.where(status: params[:status])
+    end
+
+    readings = readings.order(updated_at: :desc)
+    @pagy, readings = pagy(readings)
+
+    render json: {
+      readings: readings.map { |r| reading_json(r) },
+      pagination: {page: @pagy.page, pages: @pagy.pages, count: @pagy.count}
+    }
   end
 
   def show
