@@ -44,7 +44,7 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:member)
     get "/readings?status=bogus", as: :json
     assert_response :success
-    assert_equal users(:member).readings.count, response.parsed_body["readings"].size
+    assert_equal users(:member).readings.count, response.parsed_body["pagination"]["count"]
   end
 
   test "member can create a reading" do
