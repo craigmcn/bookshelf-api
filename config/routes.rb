@@ -7,6 +7,7 @@ Rails.application.routes.draw do
 
   resource :session, controller: "sessions", only: [:show, :create, :destroy]
   resources :users, controller: "clearance/users", only: [:create]
+  resource :account, only: [:show, :update, :destroy]
 
   namespace :admin do
     root "dashboard#index"
