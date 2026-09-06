@@ -16,8 +16,8 @@ admin_user.roles = [admin_role, moderator_role]
 mod_user = User.find_or_create_by!(email: "moderator@communitybookshelf.org") { |u| u.password = User::DEFAULT_PASSWORD }
 mod_user.roles = [moderator_role]
 
-NUM_MEMBERS = 100
-members = NUM_MEMBERS.times.map do |i|
+num_members = 100
+members = num_members.times.map do |i|
   full_name = Faker::Name.name
   # Index suffix guarantees email uniqueness regardless of Faker name collisions.
   email = "#{Faker::Internet.username(specifier: full_name).gsub(/[^a-z0-9.]/i, "")}.#{i}@example.com".downcase
@@ -230,11 +230,11 @@ classic_books = [
   {title: "Between the World and Me", author: "Ta-Nehisi Coates"}
 ].uniq { |b| b[:title] }
 
-TARGET_BOOK_COUNT = 320
+target_book_count = 320
 used_titles = classic_books.pluck(:title).to_set
 book_pool = classic_books.dup
 
-while book_pool.size < TARGET_BOOK_COUNT
+while book_pool.size < target_book_count
   title = Faker::Book.title
   next if used_titles.include?(title)
 
@@ -259,7 +259,8 @@ Reading.with_deleted.delete_all
 status_weights = {want_to_read: 35, reading: 20, finished: 45}
 weighted_statuses = status_weights.flat_map { |status, weight| [status] * weight }
 
-now = Time.current
+# Fixed (not Time.current) so created_at/updated_at/deleted_at stay identical run-to-run.
+now = Time.zone.local(2026, 9, 6)
 reading_rows = []
 
 books.each do |book|
