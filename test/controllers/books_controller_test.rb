@@ -12,6 +12,43 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.key?("books")
   end
 
+  test "books index includes pagination metadata" do
+    get books_url, as: :json
+    assert_response :success
+    pagination = response.parsed_body["pagination"]
+    assert_equal 1, pagination["page"]
+    assert_equal Book.count, pagination["count"]
+  end
+
+  test "books index can be searched by title or author" do
+    # GET requests with a params: hash and as: :json rely on Rack::MethodOverride
+    # to translate Rails' test-only POST+X-Http-Method-Override trick back to a
+    # GET — a middleware config.api_only strips and this app never re-adds. Pass
+    # the query string inline instead of via params: to sidestep it.
+    get "/books?q=gatsby", as: :json
+    assert_response :success
+    titles = response.parsed_body["books"].pluck("title")
+    assert_equal [@book.title], titles
+  end
+
+  test "books index search is case-insensitive and matches author" do
+    get "/books?q=ORWELL", as: :json
+    assert_response :success
+    titles = response.parsed_body["books"].pluck("title")
+    assert_equal [books(:two).title], titles
+  end
+
+  test "books index search with no matches returns an empty list" do
+    get "/books?q=#{CGI.escape("nonexistent title")}", as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body["books"]
+  end
+
+  test "books index ignores a non-string q param instead of erroring" do
+    get "/books?q[]=x", as: :json
+    assert_response :success
+  end
+
   test "anyone can view a book" do
     get book_url(@book), as: :json
     assert_response :success

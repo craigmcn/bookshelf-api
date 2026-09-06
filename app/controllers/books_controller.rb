@@ -4,7 +4,20 @@ class BooksController < ApplicationController
 
   def index
     @books = policy_scope(Book)
-    render json: {books: @books.map { |b| book_json(b) }}
+
+    query = params[:q].to_s.strip
+    if query.present?
+      like = "%#{query}%"
+      @books = @books.where("books.title ILIKE :q OR books.author ILIKE :q", q: like)
+    end
+
+    @books = @books.order(:title, :id)
+    @pagy, @books = pagy(@books)
+
+    render json: {
+      books: @books.map { |b| book_json(b) },
+      pagination: {page: @pagy.page, pages: @pagy.pages, count: @pagy.count}
+    }
   end
 
   def show
