@@ -44,6 +44,11 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], response.parsed_body["books"]
   end
 
+  test "books index ignores a non-string q param instead of erroring" do
+    get "/books?q[]=x", as: :json
+    assert_response :success
+  end
+
   test "anyone can view a book" do
     get book_url(@book), as: :json
     assert_response :success

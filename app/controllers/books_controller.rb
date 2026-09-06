@@ -5,12 +5,13 @@ class BooksController < ApplicationController
   def index
     @books = policy_scope(Book)
 
-    if params[:q].present?
-      query = "%#{params[:q].strip}%"
-      @books = @books.where("books.title ILIKE :q OR books.author ILIKE :q", q: query)
+    query = params[:q].to_s.strip
+    if query.present?
+      like = "%#{query}%"
+      @books = @books.where("books.title ILIKE :q OR books.author ILIKE :q", q: like)
     end
 
-    @books = @books.order(:title)
+    @books = @books.order(:title, :id)
     @pagy, @books = pagy(@books)
 
     render json: {
