@@ -51,6 +51,9 @@ end
 
 group :development do
   gem "dotenv-rails"
+
+  # Generates realistic fake data for db/seeds.rb
+  gem "faker"
 end
 
 group :test do
