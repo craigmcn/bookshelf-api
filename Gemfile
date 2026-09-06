@@ -47,6 +47,10 @@ group :development, :test do
 
   # Detects N+1 queries and unused eager loading
   gem "bullet"
+
+  # Generates realistic fake data for db/seeds.rb — needed in :test too since
+  # `bin/ci` runs `RAILS_ENV=test bin/rails db:seed:replant`
+  gem "faker"
 end
 
 group :development do
