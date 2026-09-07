@@ -29,6 +29,11 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_nil users(:member).reload.bio
   end
 
+  test "guest cannot update account" do
+    patch account_url, params: {user: {name: "Someone"}}, as: :json
+    assert_response :unauthorized
+  end
+
   test "guest cannot delete an account" do
     delete account_url, as: :json
     assert_response :unauthorized

@@ -59,7 +59,7 @@ class User < ApplicationRecord
 
     transaction do
       books.update_all(added_by_id: self.class.deleted_placeholder.id)
-      Reading.unscoped.where(user_id: id).destroy_all
+      Reading.unscoped.where(user_id: id).delete_all
       destroy!
     end
   end

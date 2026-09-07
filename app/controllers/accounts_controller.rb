@@ -27,8 +27,15 @@ class AccountsController < ApplicationController
       # writes a fresh remember_token to invalidate the session, which would
       # raise FrozenError against an already-destroyed (frozen) record.
       sign_out
-      user.delete_account!
-      head :no_content
+      begin
+        user.delete_account!
+        head :no_content
+      rescue User::SoleAdminError
+        # Rechecked inside delete_account! since admin state could have
+        # changed between the sole_admin? check above and this transaction.
+        render json: {error: "You're the only admin — promote another member to admin before deleting this account."},
+          status: :unprocessable_content
+      end
     end
   end
 
