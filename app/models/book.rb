@@ -1,6 +1,44 @@
 class Book < ApplicationRecord
   belongs_to :added_by, class_name: "User"
   has_many :readings, dependent: :destroy
+  has_many :taggings, dependent: :destroy
+  has_many :tags, through: :taggings
 
   validates :title, :author, presence: true
+
+  after_save :sync_tag_list, if: -> { !@tag_list.nil? }
+
+  # Virtual attribute: a comma-separated string of tag names, mirroring
+  # community_bookshelf's Book#tag_list. Only touches taggings when
+  # explicitly assigned, so an update that omits it leaves existing tags alone.
+  attr_writer :tag_list
+
+  def tag_list
+    @tag_list || tags.order(:name).pluck(:name).join(", ")
+  end
+
+  private
+
+  def sync_tag_list
+    names = @tag_list.to_s.split(",").filter_map { |name| name.strip.downcase.presence }.uniq
+    desired_ids = names.map { |name| find_or_create_tag(name).id }
+    current_ids = tags.pluck(:id)
+
+    taggings.where(tag_id: current_ids - desired_ids).destroy_all
+    (desired_ids - current_ids).each { |tag_id| taggings.create!(tag_id: tag_id) }
+
+    @tag_list = nil
+  end
+
+  # find_or_create_by finds first, so it's correct for the common case where
+  # the tag already exists. Under concurrent writes two requests can both
+  # miss that find and race on the unique index; the rescue handles that
+  # without regressing to create_or_find_by's behavior, which returns an
+  # invalid, unsaved record (not the existing one) when Tag's own uniqueness
+  # validation — not a DB conflict — is what catches the duplicate.
+  def find_or_create_tag(name)
+    Tag.find_or_create_by(name: name)
+  rescue ActiveRecord::RecordNotUnique
+    Tag.find_by!(name: name)
+  end
 end

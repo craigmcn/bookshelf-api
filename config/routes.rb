@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   resources :readings, only: [:index, :show, :create, :update, :destroy]
   resources :books, only: [:index, :show, :create, :update, :destroy]
+  resources :tags, only: [:index]
   get "book_search", to: "book_search#index"
 
   get "up", to: "rails/health#show", as: :rails_health_check
