@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_202214) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_204432) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -55,10 +55,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_202214) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.text "bio"
     t.string "confirmation_token", limit: 128
     t.datetime "created_at", null: false
     t.string "email"
     t.string "encrypted_password", limit: 128
+    t.string "name"
     t.string "remember_token", limit: 128
     t.datetime "updated_at", null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
