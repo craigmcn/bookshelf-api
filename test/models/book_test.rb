@@ -45,4 +45,14 @@ class BookTest < ActiveSupport::TestCase
     book.update!(title: "New Title")
     assert_equal ["fantasy"], book.reload.tags.pluck(:name)
   end
+
+  test "tag_list sync does not raise if the tagging was already created concurrently" do
+    book = books(:one)
+    tag = Tag.create!(name: "fantasy")
+    book.taggings.create!(tag: tag)
+
+    assert_nothing_raised do
+      book.send(:create_tagging, tag.id)
+    end
+  end
 end

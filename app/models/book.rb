@@ -25,9 +25,18 @@ class Book < ApplicationRecord
     current_ids = tags.pluck(:id)
 
     taggings.where(tag_id: current_ids - desired_ids).destroy_all
-    (desired_ids - current_ids).each { |tag_id| taggings.create!(tag_id: tag_id) }
+    (desired_ids - current_ids).each { |tag_id| create_tagging(tag_id) }
 
     @tag_list = nil
+  end
+
+  # Concurrent updates to the same book's tag_list can both compute the same
+  # missing tagging and both reach here — the loser's create! would otherwise
+  # raise on the [book_id, tag_id] unique index instead of ending up in the
+  # desired state (the tagging exists) either way.
+  def create_tagging(tag_id)
+    taggings.create!(tag_id: tag_id)
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
   end
 
   # find_or_create_by finds first, so it's correct for the common case where

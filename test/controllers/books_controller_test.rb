@@ -81,6 +81,15 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["adventure", "fantasy"], response.parsed_body.dig("book", "tags")
   end
 
+  test "filtering the index by tag still shows every tag on a multi-tagged book" do
+    @book.update!(tag_list: "fantasy, adventure, classic")
+
+    get "/books?tag=fantasy", as: :json
+    assert_response :success
+    tags = response.parsed_body["books"].first["tags"]
+    assert_equal ["adventure", "classic", "fantasy"], tags
+  end
+
   test "anyone can view a book" do
     get book_url(@book), as: :json
     assert_response :success

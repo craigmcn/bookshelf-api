@@ -13,8 +13,12 @@ class BooksController < ApplicationController
 
     tag_name = params[:tag].to_s.strip.downcase
     if tag_name.present?
-      tag = Tag.find_by(name: tag_name)
-      @books = tag ? @books.joins(:tags).where(tags: {id: tag.id}) : @books.none
+      # A subquery, not @books.joins(:tags).where(tags: {name: tag_name}) —
+      # joining :tags here would collide with the includes(:tags) preload
+      # below and silently truncate it to just the matching tag instead of
+      # every tag on the book.
+      matching_book_ids = Tagging.joins(:tag).where(tags: {name: tag_name}).select(:book_id)
+      @books = @books.where(id: matching_book_ids)
     end
 
     @books = @books.order(:title, :id)
