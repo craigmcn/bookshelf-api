@@ -11,8 +11,19 @@ class BooksController < ApplicationController
       @books = @books.where("books.title ILIKE :q OR books.author ILIKE :q", q: like)
     end
 
+    tag_name = params[:tag].to_s.strip.downcase
+    if tag_name.present?
+      # A subquery, not @books.joins(:tags).where(tags: {name: tag_name}) —
+      # joining :tags here would collide with the includes(:tags) preload
+      # below and silently truncate it to just the matching tag instead of
+      # every tag on the book.
+      matching_book_ids = Tagging.joins(:tag).where(tags: {name: tag_name}).select(:book_id)
+      @books = @books.where(id: matching_book_ids)
+    end
+
     @books = @books.order(:title, :id)
     @pagy, @books = pagy(@books)
+    @books = @books.includes(:tags)
 
     render json: {
       books: @books.map { |b| book_json(b) },
@@ -58,7 +69,7 @@ class BooksController < ApplicationController
   end
 
   def book_params
-    params.expect(book: [:title, :author, :cover_url])
+    params.expect(book: [:title, :author, :cover_url, :tag_list])
   end
 
   def book_json(book, current_user: nil)
@@ -67,7 +78,8 @@ class BooksController < ApplicationController
       title: book.title,
       author: book.author,
       cover_url: book.cover_url,
-      added_by_id: book.added_by_id
+      added_by_id: book.added_by_id,
+      tags: book.tags.map(&:name).sort
     }
     if current_user
       reading = current_user.readings.find_by(book: book)

@@ -49,6 +49,47 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "books index can be filtered by tag" do
+    @book.update!(tag_list: "fantasy")
+
+    get "/books?tag=fantasy", as: :json
+    assert_response :success
+    titles = response.parsed_body["books"].pluck("title")
+    assert_equal [@book.title], titles
+  end
+
+  test "books index tag filter is case-insensitive" do
+    @book.update!(tag_list: "fantasy")
+
+    get "/books?tag=FANTASY", as: :json
+    assert_response :success
+    titles = response.parsed_body["books"].pluck("title")
+    assert_equal [@book.title], titles
+  end
+
+  test "books index with an unknown tag returns an empty list" do
+    get "/books?tag=nonexistent", as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body["books"]
+  end
+
+  test "book JSON includes its tags" do
+    @book.update!(tag_list: "fantasy, adventure")
+
+    get book_url(@book), as: :json
+    assert_response :success
+    assert_equal ["adventure", "fantasy"], response.parsed_body.dig("book", "tags")
+  end
+
+  test "filtering the index by tag still shows every tag on a multi-tagged book" do
+    @book.update!(tag_list: "fantasy, adventure, classic")
+
+    get "/books?tag=fantasy", as: :json
+    assert_response :success
+    tags = response.parsed_body["books"].first["tags"]
+    assert_equal ["adventure", "classic", "fantasy"], tags
+  end
+
   test "anyone can view a book" do
     get book_url(@book), as: :json
     assert_response :success
@@ -69,6 +110,14 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     end
     assert_response :created
     assert_equal "New Book", response.parsed_body.dig("book", "title")
+  end
+
+  test "member can create a book with tags" do
+    sign_in_as users(:member)
+    post books_url, params: {book: {title: "New Book", author: "Some Author", tag_list: "sci-fi, adventure"}},
+      as: :json
+    assert_response :created
+    assert_equal ["adventure", "sci-fi"], response.parsed_body.dig("book", "tags")
   end
 
   test "member cannot update a book" do
@@ -95,6 +144,14 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "Updated", @book.reload.title
     assert_equal "Updated", response.parsed_body.dig("book", "title")
+  end
+
+  test "moderator can update a book's tags" do
+    sign_in_as users(:moderator)
+    patch book_url(@book), params: {book: {title: @book.title, author: @book.author, tag_list: "classic"}},
+      as: :json
+    assert_response :success
+    assert_equal ["classic"], response.parsed_body.dig("book", "tags")
   end
 
   test "moderator can destroy a book" do
