@@ -38,11 +38,11 @@ class BooksController < ApplicationController
 
   def similar
     authorize @book, :show?
-    render json: {books: @book.similar_books.map { |b| book_json(b) }}
+    render json: {books: policy_scope(@book.similar_books).map { |b| book_json(b) }}
   end
 
   def recommended
-    render json: {books: Book.recommended_for(current_user).map { |b| book_json(b) }}
+    render json: {books: policy_scope(Book.recommended_for(current_user)).map { |b| book_json(b) }}
   end
 
   def create
