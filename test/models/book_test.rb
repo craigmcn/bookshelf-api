@@ -55,4 +55,72 @@ class BookTest < ActiveSupport::TestCase
       book.send(:create_tagging, tag.id)
     end
   end
+
+  test "mood_list and pace_list sync independently of tag_list and each other" do
+    book = books(:one)
+    book.update!(tag_list: "fantasy", mood_list: "dark", pace_list: "fast-paced")
+
+    assert_equal ["fantasy"], book.tags.genre.pluck(:name)
+    assert_equal ["dark"], book.tags.mood.pluck(:name)
+    assert_equal ["fast-paced"], book.tags.pace.pluck(:name)
+  end
+
+  test "updating mood_list does not touch existing genre or pace tags" do
+    book = books(:one)
+    book.update!(tag_list: "fantasy", pace_list: "fast-paced")
+    book.update!(mood_list: "dark")
+
+    assert_equal ["fantasy"], book.reload.tags.genre.pluck(:name)
+    assert_equal ["fast-paced"], book.tags.pace.pluck(:name)
+    assert_equal ["dark"], book.tags.mood.pluck(:name)
+  end
+
+  test "similar_books ranks by tag overlap, excluding the book itself" do
+    book = books(:one)
+    same_two_tags = Book.create!(title: "Two Overlap", author: "A", added_by: users(:member))
+    same_one_tag = Book.create!(title: "One Overlap", author: "A", added_by: users(:member))
+    no_overlap = Book.create!(title: "No Overlap", author: "A", added_by: users(:member))
+
+    book.update!(tag_list: "fantasy, adventure")
+    same_two_tags.update!(tag_list: "fantasy, adventure")
+    same_one_tag.update!(tag_list: "fantasy")
+    no_overlap.update!(tag_list: "romance")
+
+    assert_equal [same_two_tags, same_one_tag], book.similar_books
+  end
+
+  test "similar_books returns none when the book has no tags" do
+    assert_equal [], books(:one).similar_books.to_a
+  end
+
+  test "recommended_for suggests books tagged like the user's finished or highly-rated reads" do
+    member = users(:member)
+    liked = books(:one)
+    liked.update!(tag_list: "fantasy")
+    liked.readings.create!(user: member, status: :finished)
+
+    recommended = Book.create!(title: "Recommended", author: "A", added_by: member, tag_list: "fantasy")
+    unrelated = Book.create!(title: "Unrelated", author: "A", added_by: member, tag_list: "romance")
+
+    results = Book.recommended_for(member)
+    assert_includes results, recommended
+    assert_not_includes results, unrelated
+    assert_not_includes results, liked
+  end
+
+  test "recommended_for excludes books already on the user's shelf" do
+    member = users(:member)
+    liked = books(:one)
+    liked.update!(tag_list: "fantasy")
+    liked.readings.create!(user: member, status: :finished)
+
+    already_shelved = Book.create!(title: "Already Shelved", author: "A", added_by: member, tag_list: "fantasy")
+    already_shelved.readings.create!(user: member, status: :want_to_read)
+
+    assert_not_includes Book.recommended_for(member), already_shelved
+  end
+
+  test "recommended_for returns none for a nil user" do
+    assert_equal [], Book.recommended_for(nil).to_a
+  end
 end

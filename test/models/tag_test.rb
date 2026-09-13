@@ -19,4 +19,13 @@ class TagTest < ActiveSupport::TestCase
     duplicate = Tag.new(name: "Fantasy")
     assert_not duplicate.valid?
   end
+
+  test "category defaults to genre" do
+    assert_equal "genre", Tag.create!(name: "fantasy").category
+  end
+
+  test "category can be mood or pace" do
+    assert_equal "mood", Tag.create!(name: "dark", category: "mood").category
+    assert_equal "pace", Tag.create!(name: "fast-paced", category: "pace").category
+  end
 end

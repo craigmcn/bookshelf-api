@@ -1,6 +1,6 @@
 class BooksController < ApplicationController
-  skip_before_action :require_login, only: [:index, :show]
-  before_action :set_book, only: %i[show update destroy]
+  skip_before_action :require_login, only: [:index, :show, :similar]
+  before_action :set_book, only: %i[show update destroy similar]
 
   def index
     @books = policy_scope(Book)
@@ -36,6 +36,15 @@ class BooksController < ApplicationController
     render json: {book: book_json(@book, current_user: current_user)}
   end
 
+  def similar
+    authorize @book, :show?
+    render json: {books: policy_scope(@book.similar_books).map { |b| book_json(b) }}
+  end
+
+  def recommended
+    render json: {books: policy_scope(Book.recommended_for(current_user)).map { |b| book_json(b) }}
+  end
+
   def create
     @book = Book.new(book_params.merge(added_by: current_user))
     authorize @book
@@ -69,17 +78,20 @@ class BooksController < ApplicationController
   end
 
   def book_params
-    params.expect(book: [:title, :author, :cover_url, :tag_list])
+    params.expect(book: [:title, :author, :cover_url, :tag_list, :mood_list, :pace_list])
   end
 
   def book_json(book, current_user: nil)
+    loaded_tags = book.tags.to_a
     json = {
       id: book.id,
       title: book.title,
       author: book.author,
       cover_url: book.cover_url,
       added_by_id: book.added_by_id,
-      tags: book.tags.map(&:name).sort
+      tags: loaded_tags.select(&:genre?).map(&:name).sort,
+      mood_tags: loaded_tags.select(&:mood?).map(&:name).sort,
+      pace_tags: loaded_tags.select(&:pace?).map(&:name).sort
     }
     if current_user
       reading = current_user.readings.find_by(book: book)
