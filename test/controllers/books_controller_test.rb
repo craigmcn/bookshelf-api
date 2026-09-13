@@ -90,10 +90,62 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["adventure", "classic", "fantasy"], tags
   end
 
+  test "book JSON includes mood and pace tags separately from genre tags" do
+    @book.update!(tag_list: "fantasy", mood_list: "dark", pace_list: "fast-paced")
+
+    get book_url(@book), as: :json
+    assert_response :success
+    book = response.parsed_body["book"]
+    assert_equal ["fantasy"], book["tags"]
+    assert_equal ["dark"], book["mood_tags"]
+    assert_equal ["fast-paced"], book["pace_tags"]
+  end
+
   test "anyone can view a book" do
     get book_url(@book), as: :json
     assert_response :success
     assert_equal @book.title, response.parsed_body.dig("book", "title")
+  end
+
+  test "anyone can view similar books" do
+    other = Book.create!(title: "Other", author: "A", added_by: users(:member))
+    @book.update!(tag_list: "fantasy")
+    other.update!(tag_list: "fantasy")
+
+    get similar_book_url(@book), as: :json
+    assert_response :success
+    titles = response.parsed_body["books"].pluck("title")
+    assert_equal [other.title], titles
+  end
+
+  test "similar books each show their full tag list, not just the overlapping tag" do
+    first = Book.create!(title: "First", author: "A", added_by: users(:member), tag_list: "fantasy, adventure")
+    second = Book.create!(title: "Second", author: "A", added_by: users(:member), tag_list: "fantasy, classic")
+    @book.update!(tag_list: "fantasy")
+
+    get similar_book_url(@book), as: :json
+    assert_response :success
+    tags_by_title = response.parsed_body["books"].to_h { |b| [b["title"], b["tags"]] }
+    assert_equal ["adventure", "fantasy"], tags_by_title[first.title]
+    assert_equal ["classic", "fantasy"], tags_by_title[second.title]
+  end
+
+  test "guest cannot view recommended books" do
+    get recommended_books_url, as: :json
+    assert_response :unauthorized
+  end
+
+  test "member can view their recommended books" do
+    liked = @book
+    liked.update!(tag_list: "fantasy")
+    liked.readings.create!(user: users(:member), status: :finished)
+    recommended = Book.create!(title: "Recommended", author: "A", added_by: users(:member), tag_list: "fantasy")
+
+    sign_in_as users(:member)
+    get recommended_books_url, as: :json
+    assert_response :success
+    titles = response.parsed_body["books"].pluck("title")
+    assert_equal [recommended.title], titles
   end
 
   # Auth wall
@@ -118,6 +170,17 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
       as: :json
     assert_response :created
     assert_equal ["adventure", "sci-fi"], response.parsed_body.dig("book", "tags")
+  end
+
+  test "member can create a book with mood and pace tags" do
+    sign_in_as users(:member)
+    post books_url,
+      params: {book: {title: "New Book", author: "Some Author", mood_list: "dark", pace_list: "fast-paced"}},
+      as: :json
+    assert_response :created
+    book = response.parsed_body["book"]
+    assert_equal ["dark"], book["mood_tags"]
+    assert_equal ["fast-paced"], book["pace_tags"]
   end
 
   test "member cannot update a book" do

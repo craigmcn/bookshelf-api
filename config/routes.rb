@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   resources :readings, only: [:index, :show, :create, :update, :destroy]
-  resources :books, only: [:index, :show, :create, :update, :destroy]
+  resources :books, only: [:index, :show, :create, :update, :destroy] do
+    member { get :similar }
+    collection { get :recommended }
+  end
   resources :tags, only: [:index]
   get "book_search", to: "book_search#index"
 
