@@ -17,6 +17,10 @@ class User < ApplicationRecord
 
   after_create :assign_default_role
 
+  scope :excluding_deleted_placeholder, -> { where.not(email: DELETED_PLACEHOLDER_EMAIL) }
+
+  def display_name = name.presence || email
+
   def admin?
     roles.exists?(name: "admin")
   end

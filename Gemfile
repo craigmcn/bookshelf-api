@@ -19,6 +19,9 @@ gem "pundit"
 # HTTP client
 gem "faraday"
 
+# JSON views for /api/v1, matching community_bookshelf's jbuilder shapes
+gem "jbuilder"
+
 # Pagination
 gem "pagy", "~> 43.8"
 

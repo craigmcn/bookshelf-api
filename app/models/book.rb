@@ -16,16 +16,18 @@ class Book < ApplicationRecord
   # so an update that omits a list leaves that category's existing tags alone.
   attr_writer :tag_list, :mood_list, :pace_list
 
-  def tag_list
-    @tag_list || tags.genre.order(:name).pluck(:name).join(", ")
-  end
+  def tag_list = @tag_list || tag_names_in("genre")
 
-  def mood_list
-    @mood_list || tags.mood.order(:name).pluck(:name).join(", ")
-  end
+  def mood_list = @mood_list || tag_names_in("mood")
 
-  def pace_list
-    @pace_list || tags.pace.order(:name).pluck(:name).join(", ")
+  def pace_list = @pace_list || tag_names_in("pace")
+
+  def self.most_read(limit: 5)
+    joins(:readings)
+      .group(:id)
+      .select("books.*, COUNT(readings.id) AS readings_count")
+      .order(readings_count: :desc, id: :desc) # id keeps tied books in a stable top list
+      .limit(limit)
   end
 
   # Books sharing the most tags (any category) with this one, most-overlap first.
@@ -50,7 +52,7 @@ class Book < ApplicationRecord
     user_readings = Reading.where(user_id: user.id)
     liked_book_ids = user_readings
       .where(status: :finished)
-      .or(user_readings.where(rating: [4, 5]))
+      .or(user_readings.where(rating: %i[four five]))
       .distinct.pluck(:book_id)
     return none if liked_book_ids.empty?
 
@@ -92,6 +94,14 @@ class Book < ApplicationRecord
 
     taggings.where(tag_id: current_ids - desired_ids).destroy_all
     (desired_ids - current_ids).each { |tag_id| create_tagging(tag_id) }
+    # Tags live in another table, so without this a cached ETag for the book would survive the edit.
+    touch unless desired_ids.sort == current_ids.sort
+  end
+
+  # Filters preloaded tags in memory, so a list page that preloads them runs no query per book.
+  def tag_names_in(category)
+    names = tags.loaded? ? tags.select { |tag| tag.category == category }.map(&:name) : tags.where(category: category).pluck(:name)
+    names.sort.join(", ")
   end
 
   # Concurrent updates to the same book's tag list can both compute the same

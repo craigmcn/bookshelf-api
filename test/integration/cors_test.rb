@@ -1,0 +1,42 @@
+require "test_helper"
+
+# Built from the same ApiCorsConfig.apply as the real middleware.
+class CorsPolicyTest < ActiveSupport::TestCase
+  test "an allow-listed origin may make credentialed requests" do
+    app = Rack::Cors.new(->(_env) { [200, {}, ["ok"]] }) { ApiCorsConfig.apply(self, ["https://app.example.com"]) }
+    env = Rack::MockRequest.env_for("/api/v1/session", "HTTP_ORIGIN" => "https://app.example.com")
+
+    _status, headers, _body = app.call(env)
+
+    assert_equal "https://app.example.com", headers["access-control-allow-origin"]
+    assert_equal "true", headers["access-control-allow-credentials"]
+  end
+
+  test "an origin not on the list gets no CORS headers" do
+    app = Rack::Cors.new(->(_env) { [200, {}, ["ok"]] }) { ApiCorsConfig.apply(self, ["https://app.example.com"]) }
+    env = Rack::MockRequest.env_for("/api/v1/session", "HTTP_ORIGIN" => "https://evil.example.com")
+
+    _status, headers, _body = app.call(env)
+
+    assert_nil headers["access-control-allow-origin"]
+  end
+end
+
+class ApiCorsConfigTest < ActiveSupport::TestCase
+  test "blank allows no origins, and unset defaults to the SPA's dev server" do
+    assert_equal [], ApiCorsConfig.allowed_origins("")
+    assert_equal ["http://localhost:3150"], ApiCorsConfig.allowed_origins
+  end
+
+  test "parses a comma-separated list, trimming whitespace" do
+    assert_equal ["https://example.com", "https://app.example.com"],
+      ApiCorsConfig.allowed_origins(" https://example.com, https://app.example.com ")
+  end
+
+  # Credentials are on, so plain-http, scheme-less and wildcard entries are refused at boot.
+  test "rejects origins that aren't https" do
+    ["http://app.example.com", "app.example.com", "*"].each do |raw|
+      assert_raises(ArgumentError, raw) { ApiCorsConfig.allowed_origins(raw) }
+    end
+  end
+end
