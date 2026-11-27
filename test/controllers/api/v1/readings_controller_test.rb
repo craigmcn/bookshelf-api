@@ -149,6 +149,15 @@ class Api::V1::ReadingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["reading", "five", users(:member).id], response.parsed_body.values_at("status", "rating", "user_id")
   end
 
+  test "member can create a reading with dnf status" do
+    api_sign_in users(:member)
+
+    api_write :post, api_v1_readings_url, {reading: {book_id: books(:two).id, status: "dnf"}}
+
+    assert_response :created
+    assert_equal "dnf", response.parsed_body["status"]
+  end
+
   test "an unknown status or rating, or a missing status, is a 422" do
     api_sign_in users(:member)
 

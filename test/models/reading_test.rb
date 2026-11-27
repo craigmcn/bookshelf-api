@@ -18,6 +18,10 @@ class ReadingTest < ActiveSupport::TestCase
     assert_not Reading.new(user: users(:member), book: books(:two), status: "shelved").valid?
   end
 
+  test "dnf is a valid status, matching the /api/v1 contract" do
+    assert Reading.new(user: users(:member), book: books(:two), status: :dnf).valid?
+  end
+
   test "for_moderation keeps a caller's earlier filters" do
     readings(:one).update_columns(deleted_at: Time.current)
     assert_includes Reading.with_deleted.for_moderation, readings(:one)
